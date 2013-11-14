@@ -1,0 +1,193 @@
+//
+//  ViewController1.m
+//  UIClass网络开发
+//
+//  Created by rimi0241 on 13-11-6.
+//  Copyright (c) 2013年 rimi0241. All rights reserved.
+//
+
+#import "ViewController1.h"
+#import "GDataXMLNode.h"
+#import "ViewController2.h"
+
+@interface ViewController1 ()
+{
+    UITableView *tableView;
+    NSMutableArray *muArray;
+    NSMutableArray *muArrayImage;
+    NSMutableArray *muArrayWebUrl;
+    NSMutableArray *muArraySum;
+    NSMutableData *mydata;
+    
+    
+}
+@end
+
+@implementation ViewController1
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+	muArray = [NSMutableArray array];
+    muArrayImage = [NSMutableArray array];
+    muArrayWebUrl = [NSMutableArray array];
+    muArraySum = [NSMutableArray array];
+    
+    self.navigationItem.rightBarButtonItems = [NSArray arrayWithObjects:[[UIBarButtonItem alloc] initWithTitle:@"同步" style:UIBarButtonItemStyleBordered target:self action:@selector(syschorRequest)],[[UIBarButtonItem alloc] initWithTitle:@"异步" style:UIBarButtonItemStyleBordered target:self action:@selector(asynchorRequest)], nil];
+    
+    
+    tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, 320, 568)];
+    tableView.delegate = self;
+    tableView.dataSource = self;
+    tableView.backgroundColor = [UIColor redColor];
+    [self.view addSubview:tableView];
+
+}
+
+- (void)syschorRequest
+{   // @"同步"
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://api.hudong.com/iphonexml.do?type=focus-c"]];
+    
+    NSURLResponse *response = nil;
+    
+    NSError *error=nil;
+    NSData *data = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+    if (error) {
+        NSLog(@"%@",[error localizedDescription]);
+    }
+    else
+    {
+        NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        
+        GDataXMLDocument *document = [[GDataXMLDocument alloc] initWithXMLString:string options:1 error:&error];
+        GDataXMLElement *rooElement = [document rootElement];
+        
+        //获得根元素节点 对象--------"产生 docTitle 数组"
+        NSArray *titleElements = [rooElement nodesForXPath:@"//docTitle" error:&error];
+        for (GDataXMLElement *str in titleElements) {
+            [muArray addObject:[str stringValue]];
+        }
+        [tableView reloadData];
+        
+        //--------"产生 docImg 数组"
+        NSArray *array = [[[rooElement elementsForName:@"docList"] objectAtIndex:0] elementsForName:@"docInfo"];
+        for (GDataXMLElement *element in array) {
+            NSArray *array = [element elementsForName:@"docImg"];
+            if (array) {
+                NSString *str = [[array objectAtIndex:0] stringValue];
+                
+                UIImage *img = [UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:str]]];
+                [muArrayImage addObject:img];
+            }
+        }
+        
+        //--------"产生 docWebUrl 数组"
+        NSArray *titleElements1 = [rooElement nodesForXPath:@"//docWebUrl" error:&error];
+        for (GDataXMLElement *str in titleElements1) {
+            [muArrayWebUrl addObject:[str stringValue]];
+        }
+        
+        //--------"产生 docSum 数组"
+        NSArray *titleElements2 = [rooElement nodesForXPath:@"//docSum" error:&error];
+        for (GDataXMLElement *str in titleElements2) {
+            [muArraySum addObject:[str stringValue]];
+        }
+    }
+}
+
+
+
+#pragma mark  异步
+- (void)asynchorRequest
+{
+    NSMutableURLRequest * request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://api.kivaws.org/v1/loans/search.json?status=fundraising"]];
+    [request setHTTPMethod:@"GET"];
+    [[NSURLConnection alloc] initWithRequest:request delegate:self];
+    
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response   //服务器开始响应
+{
+    mydata = nil;
+    mydata = [[NSMutableData alloc] init];
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data{  // 服务器 接收数据
+    [mydata appendData:data];
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)connection
+{        //  连接结束
+    NSError *error = nil;
+    NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:mydata options:kNilOptions error:&error];
+    if (!error) {
+        NSString *str = [[[dic objectForKey:@"loans"] objectAtIndex:0] objectForKey:@"activity"];
+        NSLog(@"%@",str);
+        NSLog(@"%@",dic);
+    }else{
+        NSLog(@"%@",[error localizedDescription]);
+    }
+    
+    //将字典 转换成JSON
+    NSData *data = [NSJSONSerialization dataWithJSONObject:[NSDictionary dictionaryWithObjectsAndKeys:@"obj1",@"key1",@"obj2",@"key2", nil] options:NSJSONWritingPrettyPrinted error:&error];
+    NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    NSLog(@"%@",jsonStr);
+}
+
+#pragma mark - Table view data source
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    
+    // Return the number of sections.
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    
+    // Return the number of rows in the section.
+    return muArray.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView1 cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *CellIdentifier = @"Cell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+    if (!cell) {
+        cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+    }
+    cell.textLabel.text = [muArray objectAtIndex:indexPath.row];//给表格添加数据
+    
+    // Configure the cell...
+    
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView1 didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    ViewController2 *push = [[ViewController2 alloc]init];
+//    push.strTitle = [[tableView cellForRowAtIndexPath:indexPath] textLabel].text;
+    push.strTitle = [muArray objectAtIndex:indexPath.row];
+    push.image = [muArrayImage objectAtIndex:indexPath.row];
+    push.strWebUrl = [muArrayWebUrl objectAtIndex:indexPath.row];
+    push.strSum = [muArraySum objectAtIndex:indexPath.row];
+    [self.navigationController pushViewController:push animated:YES];
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];//取消选中状态
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end
