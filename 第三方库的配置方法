@@ -1,0 +1,15 @@
+1.导入库文件：      GDataXMLNode  
+2.XCode里面添加库： libxml2.dylib.framework
+3.Targets ---- Build Settings ----- Header Search Paths --添加---" ${SDKROOT}/usr/include/libxml2 "
+4.对不支持ARC的库，进行关闭ARC  ：Targets-----Build Phases------Compile Sources-----"-fno-objc-arc"
+
+
+ GDataXMLNode : XML解析库
+ SDWebImage：图片异步下载/缓存--------关联的库：MapKit.framework  and  ImageIO.framewor
+ 
+ ASIHttpRequest:关联的库:SystemConfiguration.framework
+                         MessageUI.framework
+                         MobileCoreServices.framework
+                         CFNetwork.framework
+                         libz.1.2.5.dylib
+（已不维护了，且不支持ARC，AFNetworking推荐使用这个）
